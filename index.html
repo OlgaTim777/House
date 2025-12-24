@@ -648,6 +648,12 @@
       startBtn.style.background = config.button_color || defaultConfig.button_color;
       startBtn.style.color = config.card_background || defaultConfig.card_background;
       startBtn.style.fontSize = `${baseFontSize * 1.125}px`;
+      startBtn.onmouseenter = () => {
+        startBtn.style.background = config.button_hover_color || defaultConfig.button_hover_color;
+      };
+      startBtn.onmouseleave = () => {
+        startBtn.style.background = config.button_color || defaultConfig.button_color;
+      };
       
       document.querySelectorAll('#items-container > div').forEach(item => {
         item.style.background = config.card_background || defaultConfig.card_background;
@@ -691,6 +697,53 @@
       playAgainBtn.style.background = config.button_color || defaultConfig.button_color;
       playAgainBtn.style.color = config.card_background || defaultConfig.card_background;
       playAgainBtn.style.fontSize = `${baseFontSize * 1.25}px`;
+      playAgainBtn.onmouseenter = () => {
+        playAgainBtn.style.background = config.button_hover_color || defaultConfig.button_hover_color;
+      };
+      playAgainBtn.onmouseleave = () => {
+        playAgainBtn.style.background = config.button_color || defaultConfig.button_color;
+      };
+      
+      const tryAgainBtn = document.getElementById('try-again-btn');
+      tryAgainBtn.style.background = config.button_color || defaultConfig.button_color;
+      tryAgainBtn.style.color = config.card_background || defaultConfig.card_background;
+      tryAgainBtn.style.fontSize = `${baseFontSize * 1.25}px`;
+      tryAgainBtn.onmouseenter = () => {
+        tryAgainBtn.style.background = config.button_hover_color || defaultConfig.button_hover_color;
+      };
+      tryAgainBtn.onmouseleave = () => {
+        tryAgainBtn.style.background = config.button_color || defaultConfig.button_color;
+      };
+      
+      const gameoverModal = document.querySelector('#gameover-modal > div');
+      gameoverModal.style.background = config.card_background || defaultConfig.card_background;
+      gameoverModal.style.color = config.text_color || defaultConfig.text_color;
+      
+      const timerDisplays = document.querySelectorAll('.max-w-6xl .rounded-2xl .grid.grid-cols-2 > div');
+      timerDisplays.forEach(display => {
+        display.style.background = config.card_background || defaultConfig.card_background;
+        display.style.color = config.text_color || defaultConfig.text_color;
+        display.style.fontSize = `${baseFontSize}px`;
+      });
+      
+      document.getElementById('timer-display').style.fontSize = `${baseFontSize * 1.875}px`;
+      document.getElementById('score-display').style.fontSize = `${baseFontSize * 1.875}px`;
+      
+      document.getElementById('progress-text').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('progress-text').style.fontSize = `${baseFontSize * 0.875}px`;
+      
+      const itemsTitle = document.querySelector('#items-container').previousElementSibling;
+      itemsTitle.style.color = config.text_color || defaultConfig.text_color;
+      itemsTitle.style.fontSize = `${baseFontSize * 1.5}px`;
+      
+      const itemsCard = document.querySelector('#game-area > div');
+      itemsCard.style.background = config.card_background || defaultConfig.card_background;
+      
+      const allLabels = document.querySelectorAll('.max-w-6xl .rounded-2xl label');
+      allLabels.forEach(label => {
+        label.style.color = config.text_color || defaultConfig.text_color;
+        label.style.fontSize = `${baseFontSize * 0.875}px`;
+      });
     }
 
     if (window.elementSdk) {
@@ -758,5 +811,5 @@
       onConfigChange(window.elementSdk.config);
     }
   </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b2dc72ca4208d6e',t:'MTc2NjU1NDk3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b2dd8fd6365f78c',t:'MTc2NjU1NTcwNC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>

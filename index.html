@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Furniture Sorting Game</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+    
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+    
+    .draggable-item {
+      cursor: grab;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .draggable-item:active {
+      cursor: grabbing;
+    }
+    
+    .draggable-item.dragging {
+      opacity: 0.5;
+      transform: rotate(5deg);
+    }
+    
+    .drop-zone {
+      min-height: 180px;
+      transition: all 0.3s;
+      border: 3px dashed transparent;
+    }
+    
+    .drop-zone.drag-over {
+      transform: scale(1.02);
+      border-color: #ec4899;
+      box-shadow: 0 0 30px rgba(236, 72, 153, 0.4);
+    }
+    
+    .item-shake {
+      animation: shake 0.5s;
+    }
+    
+    .item-success {
+      animation: success-pulse 0.6s;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px) rotate(-5deg); }
+      75% { transform: translateX(10px) rotate(5deg); }
+    }
+    
+    @keyframes success-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+    
+    .celebration {
+      animation: celebrate 0.8s ease-out;
+    }
+    
+    @keyframes celebrate {
+      0% { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+      50% { transform: scale(1.1) rotate(5deg); }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    
+    .sparkle {
+      animation: sparkle 2s infinite;
+    }
+    
+    @keyframes sparkle {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+    
+    .hint-popup {
+      animation: hint-bounce 0.5s;
+    }
+    
+    @keyframes hint-bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    
+    .timer-warning {
+      animation: timer-pulse 1s infinite;
+    }
+    
+    @keyframes timer-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app-container" class="w-full h-full overflow-auto">
+   <div class="min-h-full p-6"><!-- Header with sparkles -->
+    <div class="text-center mb-6 relative">
+     <div class="absolute top-0 left-0 right-0 flex justify-center gap-8 text-4xl sparkle">
+      ✨ ⭐ ✨ ⭐ ✨
+     </div>
+     <h1 id="game-title" class="text-5xl font-bold mb-3 mt-8" style="text-shadow: 2px 2px 4px rgba(236, 72, 153, 0.3);">Barbie's Dream House Designer</h1>
+     <p id="instructions" class="text-xl font-semibold">Help Barbie organize her fabulous furniture! 💖</p>
+    </div><!-- Game Controls -->
+    <div class="max-w-6xl mx-auto mb-6">
+     <div class="rounded-2xl p-6 shadow-lg">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6"><!-- Difficulty Selection -->
+       <div><label class="block text-sm font-bold mb-2">Difficulty Level 🎀</label> <select id="difficulty-select" class="w-full px-4 py-3 rounded-xl font-semibold shadow-md transition-all"> <option value="easy">Easy - 10 items</option> <option value="medium">Medium - 20 items</option> </select>
+       </div><!-- Timer Setting -->
+       <div><label class="block text-sm font-bold mb-2">Timer (seconds) ⏱️</label> <input type="number" id="timer-input" min="30" max="600" value="120" class="w-full px-4 py-3 rounded-xl font-semibold shadow-md">
+       </div><!-- Start Button -->
+       <div class="flex items-end"><button id="start-btn" class="w-full px-6 py-3 rounded-xl font-bold text-lg shadow-lg transition-all transform hover:scale-105"> Start Game! 🎮 </button>
+       </div>
+      </div><!-- Timer Display and Score -->
+      <div class="mt-6 grid grid-cols-2 gap-4">
+       <div class="text-center p-4 rounded-xl shadow-md">
+        <div class="text-sm font-bold mb-1">
+         Time Remaining
+        </div>
+        <div id="timer-display" class="text-3xl font-bold">
+         2:00
+        </div>
+       </div>
+       <div class="text-center p-4 rounded-xl shadow-md">
+        <div class="text-sm font-bold mb-1">
+         Score 🌟
+        </div>
+        <div id="score-display" class="text-3xl font-bold">
+         0
+        </div>
+       </div>
+      </div>
+     </div>
+    </div><!-- Progress Bar -->
+    <div class="max-w-6xl mx-auto mb-6" id="progress-section" style="display: none;">
+     <div class="flex items-center justify-between mb-2"><span class="text-sm font-bold">Progress 💕</span> <span id="progress-text" class="text-sm font-bold">0 / 10 Correct</span>
+     </div>
+     <div class="w-full h-5 rounded-full overflow-hidden shadow-inner">
+      <div id="progress-bar" class="h-full transition-all duration-500 ease-out" style="width: 0%; background: linear-gradient(90deg, #ec4899, #f472b6);"></div>
+     </div>
+    </div><!-- Hint Display -->
+    <div id="hint-display" class="max-w-6xl mx-auto mb-4 p-4 rounded-xl text-center font-bold shadow-lg hint-popup" style="display: none;"><span id="hint-text"></span>
+    </div><!-- Game Area -->
+    <div class="max-w-6xl mx-auto" id="game-area" style="display: none;"><!-- Items to Sort -->
+     <div class="mb-6 p-6 rounded-2xl shadow-lg">
+      <h2 class="text-2xl font-bold mb-4 text-center">Furniture to Sort 🛋️</h2>
+      <div id="items-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3"><!-- Items will be generated here -->
+      </div>
+     </div><!-- Drop Zones -->
+     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"><!-- Living Room -->
+      <div class="drop-zone rounded-2xl p-4 shadow-lg" data-category="living-room">
+       <h3 id="category-1" class="text-xl font-bold mb-3 text-center">🛋️ Living Room</h3>
+       <div class="space-y-2 min-h-[120px]" data-drop-container="living-room"></div>
+      </div><!-- Bedroom -->
+      <div class="drop-zone rounded-2xl p-4 shadow-lg" data-category="bedroom">
+       <h3 id="category-2" class="text-xl font-bold mb-3 text-center">🛏️ Bedroom</h3>
+       <div class="space-y-2 min-h-[120px]" data-drop-container="bedroom"></div>
+      </div><!-- Bathroom -->
+      <div class="drop-zone rounded-2xl p-4 shadow-lg" data-category="bathroom">
+       <h3 id="category-3" class="text-xl font-bold mb-3 text-center">🚿 Bathroom</h3>
+       <div class="space-y-2 min-h-[120px]" data-drop-container="bathroom"></div>
+      </div><!-- Kitchen -->
+      <div class="drop-zone rounded-2xl p-4 shadow-lg" data-category="kitchen">
+       <h3 id="category-4" class="text-xl font-bold mb-3 text-center">🍳 Kitchen</h3>
+       <div class="space-y-2 min-h-[120px]" data-drop-container="kitchen"></div>
+      </div>
+     </div>
+    </div><!-- Success Modal -->
+    <div id="success-modal" class="hidden fixed inset-0 flex items-center justify-center p-4" style="background: rgba(236, 72, 153, 0.3); backdrop-filter: blur(5px);">
+     <div class="rounded-3xl p-8 max-w-lg text-center celebration shadow-2xl">
+      <div class="text-7xl mb-4">
+       🎉✨💖
+      </div>
+      <h2 class="text-4xl font-bold mb-3">Fabulous Work!</h2>
+      <p id="success-msg" class="text-xl mb-4">You've perfectly organized Barbie's Dream House!</p>
+      <div id="final-score" class="text-2xl font-bold mb-4"></div>
+      <div id="performance-message" class="text-lg mb-6 font-semibold"></div><button id="play-again-btn" class="px-8 py-4 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-lg"> Play Again 🎀 </button>
+     </div>
+    </div><!-- Game Over Modal -->
+    <div id="gameover-modal" class="hidden fixed inset-0 flex items-center justify-center p-4" style="background: rgba(0, 0, 0, 0.5); backdrop-filter: blur(5px);">
+     <div class="rounded-3xl p-8 max-w-lg text-center shadow-2xl">
+      <div class="text-7xl mb-4">
+       ⏰
+      </div>
+      <h2 class="text-4xl font-bold mb-3">Time's Up!</h2>
+      <p class="text-xl mb-4">Keep practicing to become a design pro!</p>
+      <div id="gameover-score" class="text-2xl font-bold mb-6"></div><button id="try-again-btn" class="px-8 py-4 rounded-xl font-bold text-xl transition-all transform hover:scale-105 shadow-lg"> Try Again 💪 </button>
+     </div>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      background_color: "#fce7f3",
+      card_background: "#ffffff",
+      text_color: "#be185d",
+      button_color: "#ec4899",
+      button_hover_color: "#db2777",
+      living_room_color: "#fef3c7",
+      bedroom_color: "#fce7f3",
+      bathroom_color: "#dbeafe",
+      kitchen_color: "#dcfce7",
+      hint_background: "#fef9c3",
+      timer_warning_color: "#fca5a5",
+      font_family: "Quicksand",
+      font_size: 16,
+      game_title: "Barbie's Dream House Designer",
+      instructions_text: "Help Barbie organize her fabulous furniture! 💖",
+      category_1_name: "🛋️ Living Room",
+      category_2_name: "🛏️ Bedroom",
+      category_3_name: "🚿 Bathroom",
+      category_4_name: "🍳 Kitchen",
+      success_message: "You've perfectly organized Barbie's Dream House!"
+    };
+
+    const furnitureData = {
+      easy: {
+        'living-room': [
+          { name: "Sofa", emoji: "🛋️" },
+          { name: "TV", emoji: "📺" },
+          { name: "Coffee Table", emoji: "🪑" }
+        ],
+        'bedroom': [
+          { name: "Bed", emoji: "🛏️" },
+          { name: "Lamp", emoji: "💡" },
+          { name: "Wardrobe", emoji: "🚪" }
+        ],
+        'bathroom': [
+          { name: "Bathtub", emoji: "🛁" },
+          { name: "Toilet", emoji: "🚽" }
+        ],
+        'kitchen': [
+          { name: "Refrigerator", emoji: "🧊" },
+          { name: "Oven", emoji: "🍳" },
+          { name: "Sink", emoji: "🚰" }
+        ]
+      },
+      medium: {
+        'living-room': [
+          { name: "Sofa", emoji: "🛋️" },
+          { name: "TV", emoji: "📺" },
+          { name: "Coffee Table", emoji: "🪑" },
+          { name: "Bookshelf", emoji: "📚" },
+          { name: "Armchair", emoji: "🪑" }
+        ],
+        'bedroom': [
+          { name: "Bed", emoji: "🛏️" },
+          { name: "Lamp", emoji: "💡" },
+          { name: "Wardrobe", emoji: "🚪" },
+          { name: "Nightstand", emoji: "🕯️" },
+          { name: "Mirror", emoji: "🪞" }
+        ],
+        'bathroom': [
+          { name: "Bathtub", emoji: "🛁" },
+          { name: "Toilet", emoji: "🚽" },
+          { name: "Shower", emoji: "🚿" },
+          { name: "Towel Rack", emoji: "🧺" },
+          { name: "Cabinet", emoji: "🗄️" }
+        ],
+        'kitchen': [
+          { name: "Refrigerator", emoji: "🧊" },
+          { name: "Oven", emoji: "🍳" },
+          { name: "Sink", emoji: "🚰" },
+          { name: "Microwave", emoji: "📦" },
+          { name: "Dishwasher", emoji: "🍽️" }
+        ]
+      }
+    };
+
+    const successMessages = [
+      "Absolutely Fabulous! 💖",
+      "You're a Design Star! ⭐",
+      "Perfect Placement! ✨",
+      "Stunning Work! 🌟",
+      "Dream House Goals! 💕"
+    ];
+
+    const hints = [
+      "Think about where you'd use this item! 🤔",
+      "Which room needs this furniture? 💭",
+      "You've got this! Try another room! 💪",
+      "So close! Think about the room's purpose! 🏠",
+      "Keep trying! You're doing great! 🌈"
+    ];
+
+    let correctCount = 0;
+    let totalItems = 0;
+    let draggedElement = null;
+    let score = 0;
+    let timerInterval = null;
+    let timeRemaining = 0;
+    let gameActive = false;
+    let wrongAttempts = 0;
+
+    // Audio synthesis for correct/wrong sounds
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    function playCorrectSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime); // C5
+      oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1); // E5
+      oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2); // G5
+      
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    function playWrongSound() {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.frequency.setValueAtTime(300, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(200, audioContext.currentTime + 0.15);
+      
+      gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+      
+      oscillator.start(audioContext.currentTime);
+      oscillator.stop(audioContext.currentTime + 0.25);
+    }
+
+    function shuffleArray(array) {
+      const shuffled = [...array];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return shuffled;
+    }
+
+    function startGame() {
+      const difficulty = document.getElementById('difficulty-select').value;
+      const timerValue = parseInt(document.getElementById('timer-input').value) || 120;
+      
+      correctCount = 0;
+      score = 0;
+      wrongAttempts = 0;
+      timeRemaining = timerValue;
+      gameActive = true;
+      
+      document.getElementById('game-area').style.display = 'block';
+      document.getElementById('progress-section').style.display = 'block';
+      document.getElementById('hint-display').style.display = 'none';
+      
+      initializeGame(difficulty);
+      startTimer();
+      updateScore();
+    }
+
+    function initializeGame(difficulty) {
+      const itemsContainer = document.getElementById('items-container');
+      itemsContainer.innerHTML = '';
+      
+      document.querySelectorAll('[data-drop-container]').forEach(container => {
+        container.innerHTML = '';
+      });
+
+      let allFurniture = [];
+      const furnitureSet = furnitureData[difficulty];
+      
+      for (const [category, items] of Object.entries(furnitureSet)) {
+        items.forEach(item => {
+          allFurniture.push({ ...item, category });
+        });
+      }
+      
+      totalItems = allFurniture.length;
+      updateProgress();
+      
+      const shuffledFurniture = shuffleArray(allFurniture);
+      
+      shuffledFurniture.forEach((item, index) => {
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'draggable-item rounded-xl p-3 text-center shadow-lg cursor-grab';
+        itemDiv.draggable = true;
+        itemDiv.dataset.category = item.category;
+        itemDiv.dataset.id = index;
+        itemDiv.innerHTML = `
+          <div class="text-3xl mb-1">${item.emoji}</div>
+          <div class="font-bold text-sm">${item.name}</div>
+        `;
+        
+        itemDiv.addEventListener('dragstart', handleDragStart);
+        itemDiv.addEventListener('dragend', handleDragEnd);
+        
+        itemsContainer.appendChild(itemDiv);
+      });
+
+      document.getElementById('success-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+    }
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      
+      updateTimerDisplay();
+      
+      timerInterval = setInterval(() => {
+        if (!gameActive) {
+          clearInterval(timerInterval);
+          return;
+        }
+        
+        timeRemaining--;
+        updateTimerDisplay();
+        
+        if (timeRemaining <= 10 && timeRemaining > 0) {
+          document.getElementById('timer-display').classList.add('timer-warning');
+        }
+        
+        if (timeRemaining <= 0) {
+          clearInterval(timerInterval);
+          gameOver();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(timeRemaining / 60);
+      const seconds = timeRemaining % 60;
+      const display = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      document.getElementById('timer-display').textContent = display;
+      
+      if (timeRemaining > 10) {
+        document.getElementById('timer-display').classList.remove('timer-warning');
+      }
+    }
+
+    function updateScore() {
+      document.getElementById('score-display').textContent = score;
+    }
+
+    function showHint(message) {
+      const hintDisplay = document.getElementById('hint-display');
+      const hintText = document.getElementById('hint-text');
+      hintText.textContent = message;
+      hintDisplay.style.display = 'block';
+      
+      setTimeout(() => {
+        hintDisplay.style.display = 'none';
+      }, 2000);
+    }
+
+    function handleDragStart(e) {
+      if (!gameActive) return;
+      draggedElement = e.target;
+      e.target.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+      if (!gameActive) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      return false;
+    }
+
+    function handleDragEnter(e) {
+      if (!gameActive) return;
+      const dropZone = e.target.closest('.drop-zone');
+      if (dropZone) {
+        dropZone.classList.add('drag-over');
+      }
+    }
+
+    function handleDragLeave(e) {
+      const dropZone = e.target.closest('.drop-zone');
+      if (dropZone && !dropZone.contains(e.relatedTarget)) {
+        dropZone.classList.remove('drag-over');
+      }
+    }
+
+    function handleDrop(e) {
+      if (!gameActive) return;
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const dropZone = e.target.closest('.drop-zone');
+      if (!dropZone || !draggedElement) return;
+      
+      dropZone.classList.remove('drag-over');
+      
+      const targetCategory = dropZone.dataset.category;
+      const itemCategory = draggedElement.dataset.category;
+      const dropContainer = dropZone.querySelector('[data-drop-container]');
+      
+      if (targetCategory === itemCategory) {
+        playCorrectSound();
+        
+        draggedElement.classList.add('item-success');
+        draggedElement.draggable = false;
+        draggedElement.style.cursor = 'default';
+        dropContainer.appendChild(draggedElement);
+        
+        correctCount++;
+        score += (wrongAttempts === 0 ? 100 : Math.max(50, 100 - (wrongAttempts * 10)));
+        wrongAttempts = 0;
+        
+        updateProgress();
+        updateScore();
+        
+        const randomMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+        showHint(randomMessage);
+        
+        setTimeout(() => {
+          draggedElement.classList.remove('item-success');
+        }, 600);
+        
+        if (correctCount === totalItems) {
+          setTimeout(() => {
+            gameActive = false;
+            clearInterval(timerInterval);
+            showSuccessModal();
+          }, 500);
+        }
+      } else {
+        playWrongSound();
+        
+        draggedElement.classList.add('item-shake');
+        wrongAttempts++;
+        score = Math.max(0, score - 10);
+        updateScore();
+        
+        const randomHint = hints[Math.floor(Math.random() * hints.length)];
+        showHint(randomHint);
+        
+        setTimeout(() => {
+          draggedElement.classList.remove('item-shake');
+        }, 500);
+      }
+      
+      draggedElement = null;
+    }
+
+    function updateProgress() {
+      const percentage = (correctCount / totalItems) * 100;
+      const progressBar = document.getElementById('progress-bar');
+      const progressText = document.getElementById('progress-text');
+      
+      progressBar.style.width = `${percentage}%`;
+      progressText.textContent = `${correctCount} / ${totalItems} Correct`;
+    }
+
+    function showSuccessModal() {
+      const modal = document.getElementById('success-modal');
+      const finalScore = document.getElementById('final-score');
+      const performanceMsg = document.getElementById('performance-message');
+      
+      finalScore.textContent = `Final Score: ${score} points! 🌟`;
+      
+      const percentage = (score / (totalItems * 100)) * 100;
+      if (percentage >= 90) {
+        performanceMsg.textContent = "PERFECT! You're a superstar designer! 🌟✨";
+      } else if (percentage >= 70) {
+        performanceMsg.textContent = "Amazing work! Keep shining! 💖";
+      } else {
+        performanceMsg.textContent = "Great effort! Practice makes perfect! 🌈";
+      }
+      
+      modal.classList.remove('hidden');
+    }
+
+    function gameOver() {
+      gameActive = false;
+      const modal = document.getElementById('gameover-modal');
+      const gameoverScore = document.getElementById('gameover-score');
+      
+      gameoverScore.textContent = `You scored ${score} points with ${correctCount}/${totalItems} items sorted!`;
+      modal.classList.remove('hidden');
+    }
+
+    function resetGame() {
+      gameActive = false;
+      if (timerInterval) clearInterval(timerInterval);
+      
+      document.getElementById('game-area').style.display = 'none';
+      document.getElementById('progress-section').style.display = 'none';
+      document.getElementById('success-modal').classList.add('hidden');
+      document.getElementById('gameover-modal').classList.add('hidden');
+      
+      correctCount = 0;
+      score = 0;
+      updateScore();
+      updateProgress();
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('play-again-btn').addEventListener('click', resetGame);
+    document.getElementById('try-again-btn').addEventListener('click', resetGame);
+
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+      zone.addEventListener('dragover', handleDragOver);
+      zone.addEventListener('dragenter', handleDragEnter);
+      zone.addEventListener('dragleave', handleDragLeave);
+      zone.addEventListener('drop', handleDrop);
+    });
+
+    async function onConfigChange(config) {
+      const baseFontSize = config.font_size || defaultConfig.font_size;
+      const customFont = config.font_family || defaultConfig.font_family;
+      const baseFontStack = 'Quicksand, system-ui, sans-serif';
+      
+      document.body.style.background = config.background_color || defaultConfig.background_color;
+      document.body.style.fontFamily = `${customFont}, ${baseFontStack}`;
+      
+      document.getElementById('game-title').textContent = config.game_title || defaultConfig.game_title;
+      document.getElementById('game-title').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('game-title').style.fontSize = `${baseFontSize * 3}px`;
+      
+      document.getElementById('instructions').textContent = config.instructions_text || defaultConfig.instructions_text;
+      document.getElementById('instructions').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('instructions').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      const controlsCard = document.querySelector('.max-w-6xl .rounded-2xl');
+      controlsCard.style.background = config.card_background || defaultConfig.card_background;
+      controlsCard.style.color = config.text_color || defaultConfig.text_color;
+      
+      document.getElementById('difficulty-select').style.background = config.card_background || defaultConfig.card_background;
+      document.getElementById('difficulty-select').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('difficulty-select').style.fontSize = `${baseFontSize}px`;
+      
+      document.getElementById('timer-input').style.background = config.card_background || defaultConfig.card_background;
+      document.getElementById('timer-input').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('timer-input').style.fontSize = `${baseFontSize}px`;
+      
+      const startBtn = document.getElementById('start-btn');
+      startBtn.style.background = config.button_color || defaultConfig.button_color;
+      startBtn.style.color = config.card_background || defaultConfig.card_background;
+      startBtn.style.fontSize = `${baseFontSize * 1.125}px`;
+      
+      document.querySelectorAll('#items-container > div').forEach(item => {
+        item.style.background = config.card_background || defaultConfig.card_background;
+        item.style.color = config.text_color || defaultConfig.text_color;
+        item.style.fontSize = `${baseFontSize * 0.875}px`;
+      });
+      
+      document.getElementById('category-1').textContent = config.category_1_name || defaultConfig.category_1_name;
+      document.getElementById('category-1').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('category-1').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      document.getElementById('category-2').textContent = config.category_2_name || defaultConfig.category_2_name;
+      document.getElementById('category-2').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('category-2').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      document.getElementById('category-3').textContent = config.category_3_name || defaultConfig.category_3_name;
+      document.getElementById('category-3').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('category-3').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      document.getElementById('category-4').textContent = config.category_4_name || defaultConfig.category_4_name;
+      document.getElementById('category-4').style.color = config.text_color || defaultConfig.text_color;
+      document.getElementById('category-4').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      const dropZones = document.querySelectorAll('.drop-zone');
+      dropZones[0].style.background = config.living_room_color || defaultConfig.living_room_color;
+      dropZones[1].style.background = config.bedroom_color || defaultConfig.bedroom_color;
+      dropZones[2].style.background = config.bathroom_color || defaultConfig.bathroom_color;
+      dropZones[3].style.background = config.kitchen_color || defaultConfig.kitchen_color;
+      
+      document.getElementById('hint-display').style.background = config.hint_background || defaultConfig.hint_background;
+      document.getElementById('hint-display').style.color = config.text_color || defaultConfig.text_color;
+      
+      const successModal = document.querySelector('#success-modal > div');
+      successModal.style.background = config.card_background || defaultConfig.card_background;
+      successModal.style.color = config.text_color || defaultConfig.text_color;
+      
+      document.getElementById('success-msg').textContent = config.success_message || defaultConfig.success_message;
+      document.getElementById('success-msg').style.fontSize = `${baseFontSize * 1.25}px`;
+      
+      const playAgainBtn = document.getElementById('play-again-btn');
+      playAgainBtn.style.background = config.button_color || defaultConfig.button_color;
+      playAgainBtn.style.color = config.card_background || defaultConfig.card_background;
+      playAgainBtn.style.fontSize = `${baseFontSize * 1.25}px`;
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.card_background || defaultConfig.card_background,
+              set: (value) => {
+                config.card_background = value;
+                window.elementSdk.setConfig({ card_background: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.button_color || defaultConfig.button_color,
+              set: (value) => {
+                config.button_color = value;
+                window.elementSdk.setConfig({ button_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: {
+            get: () => config.font_family || defaultConfig.font_family,
+            set: (value) => {
+              config.font_family = value;
+              window.elementSdk.setConfig({ font_family: value });
+            }
+          },
+          fontSizeable: {
+            get: () => config.font_size || defaultConfig.font_size,
+            set: (value) => {
+              config.font_size = value;
+              window.elementSdk.setConfig({ font_size: value });
+            }
+          }
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["game_title", config.game_title || defaultConfig.game_title],
+          ["instructions_text", config.instructions_text || defaultConfig.instructions_text],
+          ["category_1_name", config.category_1_name || defaultConfig.category_1_name],
+          ["category_2_name", config.category_2_name || defaultConfig.category_2_name],
+          ["category_3_name", config.category_3_name || defaultConfig.category_3_name],
+          ["category_4_name", config.category_4_name || defaultConfig.category_4_name],
+          ["success_message", config.success_message || defaultConfig.success_message]
+        ])
+      });
+
+      onConfigChange(window.elementSdk.config);
+    }
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9b2dc72ca4208d6e',t:'MTc2NjU1NDk3NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
